@@ -1,0 +1,17 @@
+scene,character,character_color,dialog,font_size,font_color
+opening,ナレーター,#FFFFFF,～とある学園の放課後～,24px,#FFFFFF
+opening,主人公 太郎,#FF6B6B,（今日も一日が終わった……）,16px,#FFFFFF
+opening,先輩 美咲,#9C51B6,あら、太郎くん、まだ帰らないの？,18px,#FFD700
+classroom,主人公 太郎,#FF6B6B,あ、先輩。いや、ちょっと用事が……,16px,#FFFFFF
+classroom,先輩 美咲,#9C51B6,ふーん？,18px,#FFFFFF
+classroom,先輩 美咲,#9C51B6,もしかして、私を待ってた？,18px,#FF69B4
+classroom,主人公 太郎,#FF6B6B,い、違います！,16px,#FF0000
+rooftop,主人公 太郎,#FF6B6B,（結局、屋上に来てしまった）,16px,#FFFFFF
+rooftop,先輩 美咲,#9C51B6,ねえ、太郎くん。私、実は……,18px,#FF69B4
+rooftop,ナレーター,#CCCCCC,（美咲先輩が近づいてくる）,14px,#CCCCCC
+rooftop,システム,#00FF00,【選択肢】,20px,#00FF00
+rooftop,システム,#00FF00,"1. 先輩の言葉を遮る\n2. 静かに聞く",16px,#00FF00
+flashback,ナレーター,#FFFFFF,～1年前～,24px,#FFFFFF
+flashback,幼なじみ ゆかり,#4169E1,太郎くん、私のこと……好き？,18px,#FF1493
+flashback,主人公 太郎,#FF6B6B,えっ!? 急にどうしたんだよ……,16px,#FF0000
+ending,ナレーター,#FFFFFF,～そして、物語は続いていく～,24px,#FFFFFF
