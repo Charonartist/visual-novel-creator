@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADVゲーム風紙芝居作成ツール</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* ADVゲーム風紙芝居作成ツール スタイルシート */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        /* ツールパネル */
+        .tool-panel {
+            width: 320px;
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            overflow-y: auto;
+            border: 1px solid #444;
+        }
+
+        .tool-panel h2 {
+            color: #4a9cff;
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .panel-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #444;
+        }
+
+        .panel-section:last-child {
+            border-bottom: none;
+        }
+
+        .panel-section h3 {
+            margin-bottom: 15px;
+            color: #6bb6ff;
+            font-size: 16px;
+        }
+
+        /* プレビューエリア */
+        .preview-area {
+            flex: 1;
+            background: linear-gradient(45deg, #1a1a1a 25%, #262626 25%, #262626 50%, #1a1a1a 50%, #1a1a1a 75%, #262626 75%, #262626);
+            background-size: 20px 20px;
+            border-radius: 8px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: auto; 
+            border: 1px solid #444;
+            padding: 20px;
+        }
+
+        .scene-container {
+            position: relative;
+            display: inline-block; 
+            margin: auto;
+            line-height: 0; 
+        }
+
+        .empty-scene {
+            color: #666;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        .background-image {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            display: block; 
+            object-fit: contain; 
+        }
+
+        .text-window {
+            position: absolute; 
+            height: auto; 
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; 
+            padding: 20px 30px;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            overflow: hidden; 
+        }
+
+        .window-content {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 10px; 
+        }
+
+        .character-name {
+            font-weight: bold;
+            line-height: 1.3;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .dialog-text {
+            /* line-height will be set by JS for preview if needed, or default here */
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+        }
+
+        /* シーン管理パネル */
+        .scene-panel {
+            width: 220px;
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            overflow-y: auto;
+            border: 1px solid #444;
+        }
+
+        .scene-panel h3 {
+            color: #4a9cff;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        #scenes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .scene-thumbnail {
+            position: relative;
+            background: #1a1a1a;
+            border-radius: 6px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid #444;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .scene-thumbnail:hover {
+            border-color: #4a9cff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(74, 156, 255, 0.3);
+        }
+
+        .scene-thumbnail.active {
+            border-color: #4a9cff;
+            box-shadow: 0 0 0 3px rgba(74, 156, 255, 0.3);
+        }
+
+        .scene-thumbnail[draggable="true"] {
+            cursor: move;
+        }
+
+        .scene-thumbnail.dragging {
+            opacity: 0.5;
+        }
+
+        .scene-thumbnail img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+        }
+
+        .scene-info {
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.6);
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .scene-info span {
+            display: block;
+            font-size: 12px;
+            font-weight: bold;
+            color: #4a9cff;
+        }
+
+        .scene-preview {
+            font-size: 11px;
+            color: #999;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+
+        .delete-scene {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scene-thumbnail:hover .delete-scene {
+            opacity: 1;
+        }
+
+        .delete-scene:hover {
+            background: #ff0000;
+            transform: scale(1.1);
+        }
+
+        /* フォーム要素 */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #b0b0b0;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="file"],
+        input[type="number"], 
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            font-family: 'Noto Sans JP', sans-serif;
+            transition: all 0.2s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus, 
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #4a9cff;
+            box-shadow: 0 0 0 2px rgba(74, 156, 255, 0.2);
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        input[type="file"] {
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: #444;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #4a9cff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* ウィンドウスタイル選択 */
+        .window-style-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .window-style-option {
+            text-align: center;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .window-style-option:hover {
+            background: rgba(74, 156, 255, 0.1);
+        }
+
+        .window-style-option.selected {
+            border-color: #4a9cff;
+            background: rgba(74, 156, 255, 0.2);
+        }
+
+        .window-style-option img {
+            width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        .window-style-option p {
+            font-size: 11px;
+            margin-top: 5px;
+            color: #999;
+        }
+
+        /* ボタン */
+        button {
+            width: 100%;
+            background-color: #4a9cff;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background-color: #3a8ce9;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(74, 156, 255, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background-color: #666;
+        }
+
+        .btn-secondary:hover {
+            background-color: #777;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        /* 位置調整コントロール */
+        .position-controls {
+            margin-top: 10px;
+            background-color: #1a1a1a;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+
+        .position-row {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin: 3px 0;
+        }
+
+        .pos-btn {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #444;
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .pos-btn:hover {
+            background-color: #3a3a3a;
+            border-color: #4a9cff;
+        }
+
+        .pos-btn[data-direction="center"] {
+            background-color: #444;
+        }
+
+        /* カラー選択 */
+        .character-name-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .character-name-container input[type="text"] {
+            flex: 1;
+        }
+
+        .color-select {
+            width: 80px;
+            padding: 8px;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+       
+        .font-size-control-group { 
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .font-size-control-group select {
+            flex: 1;
+        }
+        .font-size-control-group input[type="number"] {
+            width: 70px;
+            padding: 10px 8px; 
+            text-align: center;
+        }
+        .font-size-control-group .unit-label {
+            font-size: 14px;
+            color: #b0b0b0;
+        }
+
+
+        /* ウィンドウ位置調整 */
+        .window-position-controls {
+            background-color: #1a1a1a;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 10px;
+            border: 1px solid #444;
+        }
+
+        .window-position-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .window-move-btn {
+            width: 40px;
+            height: 40px;
+            font-size: 16px;
+            border: 1px solid #444;
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .window-move-btn:hover {
+            background-color: #3a3a3a;
+            border-color: #4a9cff;
+        }
+
+        .window-position-values {
+            display: flex;
+            justify-content: space-around;
+            background-color: #1a1a1a;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: #999;
+        }
+
+        .window-position-values span {
+            font-weight: bold;
+            color: #4a9cff;
+        }
+        
+        /* Import/Export */
+        .import-export-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #444;
+        }
+
+        .file-upload {
+            display: block;
+            width: 100%;
+            padding: 10px 16px;
+            background-color: #4a9cff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            text-align: center;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .file-upload:hover {
+            background-color: #3a8ce9;
+        }
+
+        .sample-csv-link {
+            display: block;
+            margin-top: 5px;
+            color: #4a9cff;
+            text-decoration: none;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .sample-csv-link:hover {
+            text-decoration: underline;
+        }
+
+        /* レスポンシブ対応 */
+        @media (max-width: 1200px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .tool-panel, .scene-panel {
+                width: 100%;
+            }
+            
+            .preview-area {
+                height: 60vh;
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ツールパネル -->
+        <div class="tool-panel">
+            <h2>ADVゲーム風紙芝居作成ツール</h2>
+            
+            <div class="panel-section">
+                <h3>画像管理</h3>
+                <div class="form-group">
+                    <label for="image-upload">背景画像をアップロード</label>
+                    <input type="file" id="image-upload" accept="image/*">
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>ウィンドウ設定</h3>
+                <div class="form-group">
+                    <label>ウィンドウスタイル</label>
+                    <div class="window-style-options">
+                        <div class="window-style-option selected" data-window="standard">
+                            <div style="width:100%;height:40px;background:rgba(0,0,0,0.8);border-radius:4px;"></div>
+                            <p>スタンダード</p>
+                        </div>
+                        <div class="window-style-option" data-window="fantasy">
+                            <div style="width:100%;height:40px;background:linear-gradient(135deg,#2a1a3a 0%,#1a2a3a 100%);border-radius:4px;border:2px solid gold;"></div>
+                            <p>ファンタジー</p>
+                        </div>
+                        <div class="window-style-option" data-window="cyber">
+                            <div style="width:100%;height:40px;background:linear-gradient(135deg,#001a33 0%,#003366 100%);border-radius:4px;border:1px solid #00ffff;"></div>
+                            <p>サイバー</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="window-position">ウィンドウ位置</label>
+                    <select id="window-position">
+                        <option value="bottom">下部</option>
+                        <option value="middle">中央</option>
+                        <option value="top">上部</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="window-opacity">ウィンドウの透過度 <span id="opacity-value">80%</span></label>
+                    <input type="range" id="window-opacity" min="10" max="100" value="80">
+                </div>
+                <div class="form-group">
+                    <label for="window-scale">ウィンドウサイズ <span id="scale-value">100%</span></label>
+                    <input type="range" id="window-scale" min="50" max="150" value="100">
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>ウィンドウ位置微調整</h3>
+                <div class="window-position-controls">
+                    <div class="window-position-buttons">
+                        <button class="window-move-btn" data-direction="up">↑</button>
+                        <div class="position-row">
+                            <button class="window-move-btn" data-direction="left">←</button>
+                            <button class="window-move-btn" data-direction="center">⟲</button>
+                            <button class="window-move-btn" data-direction="right">→</button>
+                        </div>
+                        <button class="window-move-btn" data-direction="down">↓</button>
+                    </div>
+                    <div class="window-position-values">
+                        <div>X: <span id="window-pos-x">0</span>px</div>
+                        <div>Y: <span id="window-pos-y">0</span>px</div>
+                    </div>
+                    <button id="reset-window-position" class="btn-small btn-secondary">位置をリセット</button>
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <h3>テキスト設定</h3>
+                <div class="form-group">
+                    <label for="character-name">キャラクター名</label>
+                    <div class="character-name-container">
+                        <input type="text" id="character-name" placeholder="名前を入力（省略可）">
+                        <select id="character-color" class="color-select">
+                            <option value="#ffffff">白</option> <option value="#ff6b6b">赤</option> <option value="#4ecdc4">青</option>
+                            <option value="#51cf66">緑</option> <option value="#ffd43b">黄</option> <option value="#ff6ec7">ピンク</option>
+                            <option value="#48dbfb">水色</option> <option value="#a55eea">紫</option>
+                        </select>
+                    </div>
+                     <div class="form-group" style="margin-top: 10px;">
+                        <label for="character-font-size-select">キャラクター名 フォントサイズ</label>
+                        <div class="font-size-control-group">
+                            <select id="character-font-size-select">
+                                <option value="18">小 (18px)</option> <option value="20" selected>中 (20px)</option>
+                                <option value="24">大 (24px)</option> <option value="28">特大 (28px)</option>
+                                <option value="custom">カスタム</option>
+                            </select>
+                            <input type="number" id="character-font-size-input" value="20" min="8" max="100" step="1">
+                            <span class="unit-label">px</span>
+                        </div>
+                    </div>
+                    <div class="position-controls">
+                        <div class="position-row"><button type="button" class="pos-btn" data-target="character" data-direction="up">↑</button></div>
+                        <div class="position-row">
+                            <button type="button" class="pos-btn" data-target="character" data-direction="left">←</button>
+                            <button type="button" class="pos-btn" data-target="character" data-direction="center">⟲</button>
+                            <button type="button" class="pos-btn" data-target="character" data-direction="right">→</button>
+                        </div>
+                        <div class="position-row"><button type="button" class="pos-btn" data-target="character" data-direction="down">↓</button></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="dialog-text">セリフ・ナレーション</label>
+                    <textarea id="dialog-text" placeholder="テキストを入力してください"></textarea>
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label for="dialog-font-size-select">セリフ フォントサイズ</label>
+                        <div class="font-size-control-group">
+                            <select id="dialog-font-size-select">
+                                <option value="14">小 (14px)</option> <option value="16" selected>中 (16px)</option>
+                                <option value="18">大 (18px)</option> <option value="20">特大 (20px)</option>
+                                <option value="custom">カスタム</option>
+                            </select>
+                            <input type="number" id="dialog-font-size-input" value="16" min="8" max="100" step="1">
+                            <span class="unit-label">px</span>
+                        </div>
+                    </div>
+                    <div class="position-controls">
+                         <div class="position-row"><button type="button" class="pos-btn" data-target="dialog" data-direction="up">↑</button></div>
+                        <div class="position-row">
+                            <button type="button" class="pos-btn" data-target="dialog" data-direction="left">←</button>
+                            <button type="button" class="pos-btn" data-target="dialog" data-direction="center">⟲</button>
+                            <button type="button" class="pos-btn" data-target="dialog" data-direction="right">→</button>
+                        </div>
+                        <div class="position-row"><button type="button" class="pos-btn" data-target="dialog" data-direction="down">↓</button></div>
+                    </div>
+                </div>
+                                
+                <div class="form-group">
+                    <label for="font-color">セリフ フォント色</label>
+                    <select id="font-color" class="color-select">
+                        <option value="#ffffff" selected>白</option> <option value="#000000">黒</option> <option value="#ff6b6b">赤</option>
+                        <option value="#4ecdc4">青</option> <option value="#51cf66">緑</option> <option value="#ffd43b">黄</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="dialog-line-height">セリフの行間 <span id="line-height-value">1.8</span></label>
+                    <input type="range" id="dialog-line-height" min="1.0" max="3.0" step="0.1" value="1.8">
+                </div>
+            </div>
+            
+            <div class="panel-section">
+                <button id="apply-current-settings-to-all" style="margin-bottom: 10px;" class="btn-secondary">現在の設定を全シーンに適用</button>
+                <button id="save-as-image" style="margin-bottom: 10px;">現在のシーンを画像として保存</button>
+                <button id="save-all-images" style="margin-bottom: 10px;">すべてのシーンを画像として保存</button>
+                <div class="import-export-buttons">
+                    <label class="file-upload">CSVをインポート<input type="file" id="import-csv" accept=".csv" style="display: none;"></label>
+                    <button id="export-csv">CSVにエクスポート</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="preview-area" id="preview-area">
+            <div class="scene-container" id="scene-container">
+                <div class="empty-scene">画像をアップロードしてください</div>
+            </div>
+        </div>
+        
+        <div class="scene-panel">
+            <h3>シーン一覧</h3>
+            <div id="scenes-list"></div>
+        </div>
+    </div>
+    
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const POSITION_STEP = 5;
+            const WINDOW_MOVE_STEP = 10;
+
+            const fileInput = document.getElementById('image-upload');
+            const sceneContainer = document.getElementById('scene-container');
+            const characterNameInput = document.getElementById('character-name');
+            const dialogTextInput = document.getElementById('dialog-text');
+            const windowStyleOptions = document.querySelectorAll('.window-style-option');
+            const windowPositionSelect = document.getElementById('window-position');
+            
+            const characterFontSizeSelect = document.getElementById('character-font-size-select');
+            const characterFontSizeInput = document.getElementById('character-font-size-input');
+            const dialogFontSizeSelect = document.getElementById('dialog-font-size-select');
+            const dialogFontSizeInput = document.getElementById('dialog-font-size-input');
+            
+            const fontColorInput = document.getElementById('font-color');
+            const characterColorInput = document.getElementById('character-color');
+            const windowOpacitySlider = document.getElementById('window-opacity');
+            const opacityValue = document.getElementById('opacity-value');
+            const windowScaleSlider = document.getElementById('window-scale');
+            const scaleValue = document.getElementById('scale-value');
+            const dialogLineHeightSlider = document.getElementById('dialog-line-height');
+            const lineHeightValue = document.getElementById('line-height-value');
+            const windowPosXElement = document.getElementById('window-pos-x');
+            const windowPosYElement = document.getElementById('window-pos-y');
+            const applySettingsToAllButton = document.getElementById('apply-current-settings-to-all');
+
+
+            let currentScene = createDefaultSceneState();
+            let scenes = [];
+            let originalCurrentSceneForSaveAll = null; 
+
+            const windowStyles = {
+                standard: { background: 'rgba(0, 0, 0, 0.8)', border: 'none', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' },
+                fantasy: { background: 'linear-gradient(135deg, rgba(42,26,58,0.9) 0%, rgba(26,42,58,0.9) 100%)', border: '3px solid #d4af37', borderRadius: '12px', boxShadow: '0 0 20px rgba(212,175,55,0.4), inset 0 0 20px rgba(212,175,55,0.2)'},
+                cyber: { background: 'linear-gradient(135deg, rgba(0,26,51,0.9) 0%, rgba(0,51,102,0.9) 100%)', border: '2px solid #00ffff', borderRadius: '4px', boxShadow: '0 0 20px rgba(0,255,255,0.5), inset 0 0 10px rgba(0,255,255,0.3)'}
+            };
+
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const newScene = {
+                            ...currentScene, 
+                            backgroundImage: event.target.result, characterName: '', dialogText: '',
+                            characterFontSize: parseInt(characterFontSizeInput.value) || 20,
+                            fontSize: parseInt(dialogFontSizeInput.value) || 16,
+                            timestamp: new Date().toISOString(),
+                            characterPosition: { ...(currentScene.characterPosition || {x:0,y:0}) },
+                            dialogPosition: { ...(currentScene.dialogPosition || {x:0,y:0}) },
+                            windowOffset: { ...(currentScene.windowOffset || {x:0,y:0}) }
+                        };
+                        currentScene = newScene; scenes.push(newScene);
+                        characterNameInput.value = ''; dialogTextInput.value = '';
+                        renderScene(); updateSceneThumbnails();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            windowStyleOptions.forEach(opt => opt.addEventListener('click', function() {
+                windowStyleOptions.forEach(o => o.classList.remove('selected')); this.classList.add('selected');
+                const style = this.dataset.window;
+                if (currentScene) currentScene.windowStyle = style; renderScene();
+            }));
+            windowPositionSelect.addEventListener('change', function() {
+                const pos = this.value; 
+                if (currentScene) currentScene.windowPosition = pos; renderScene();
+            });
+            windowOpacitySlider.addEventListener('input', function() {
+                const op = this.value / 100; opacityValue.textContent = `${this.value}%`;
+                if (currentScene) currentScene.windowOpacity = op; renderScene();
+            });
+
+            windowScaleSlider.addEventListener('input', function() {
+                const scale = this.value / 100; scaleValue.textContent = `${this.value}%`;
+                if (currentScene) currentScene.windowScale = scale; renderScene();
+            });
+
+            dialogLineHeightSlider.addEventListener('input', function() {
+                const lineHeight = this.value; lineHeightValue.textContent = lineHeight;
+                if (currentScene) { 
+                    currentScene.dialogLineHeightForPreview = lineHeight; 
+                    renderScene(); 
+                }
+            });
+
+            characterNameInput.addEventListener('input', function() { if(currentScene) { currentScene.characterName = this.value; renderScene(); updateSceneThumbnails(); }});
+            characterColorInput.addEventListener('change', function() { if(currentScene) { currentScene.characterColor = this.value; renderScene(); updateSceneThumbnails(); }});
+            
+            function setupFontSizeControl(selectEl, inputEl, sceneProp) {
+                selectEl.addEventListener('change', function() {
+                    if (this.value === 'custom') inputEl.focus();
+                    else { const size = parseInt(this.value); inputEl.value = size; if (currentScene) { currentScene[sceneProp] = size; renderScene(); }}
+                });
+                inputEl.addEventListener('input', function() {
+                    const size = parseInt(this.value);
+                     if (isNaN(size) || size < parseInt(this.min) || size > parseInt(this.max)) { if (currentScene) renderScene(); return; }
+                    if (currentScene) { currentScene[sceneProp] = size; renderScene(); }
+                    syncSelectWithValue(selectEl, size);
+                });
+            }
+            setupFontSizeControl(characterFontSizeSelect, characterFontSizeInput, 'characterFontSize');
+            setupFontSizeControl(dialogFontSizeSelect, dialogFontSizeInput, 'fontSize');
+
+            dialogTextInput.addEventListener('input', function() { if(currentScene) { currentScene.dialogText = this.value; renderScene(); updateSceneThumbnails(); }});
+            fontColorInput.addEventListener('change', function() { if(currentScene) { currentScene.fontColor = this.value; renderScene(); }});
+
+            document.querySelectorAll('.window-move-btn').forEach(btn => btn.addEventListener('click', function(e) {
+                e.preventDefault(); if (!currentScene) return;
+                const dir = this.dataset.direction;
+                let offset = currentScene.windowOffset;
+                switch(dir) {
+                    case 'up': offset.y -= WINDOW_MOVE_STEP; break; case 'down': offset.y += WINDOW_MOVE_STEP; break;
+                    case 'left': offset.x -= WINDOW_MOVE_STEP; break; case 'right': offset.x += WINDOW_MOVE_STEP; break;
+                    case 'center': offset = {x:0,y:0}; break;
+                }
+                currentScene.windowOffset = offset; updateWindowPositionDisplay(); renderScene();
+            }));
+            document.getElementById('reset-window-position').addEventListener('click', function() {
+                if(currentScene) { currentScene.windowOffset = {x:0,y:0}; updateWindowPositionDisplay(); renderScene(); }
+            });
+            
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('pos-btn')) {
+                    e.preventDefault(); if (!currentScene) return;
+                    const target = e.target.dataset.target === 'character' ? 'characterPosition' : 'dialogPosition';
+                    const dir = e.target.dataset.direction;
+                    let pos = currentScene[target];
+                    if (dir === 'center') pos = {x:0,y:0};
+                    else {
+                        switch(dir) {
+                            case 'up': pos.y -= POSITION_STEP; break; case 'down': pos.y += POSITION_STEP; break;
+                            case 'left': pos.x -= POSITION_STEP; break; case 'right': pos.x += POSITION_STEP; break;
+                        }
+                    }
+                    currentScene[target] = pos; renderScene();
+                }
+            });
+
+            function updateWindowPositionDisplay() {
+                windowPosXElement.textContent = currentScene.windowOffset.x;
+                windowPosYElement.textContent = currentScene.windowOffset.y;
+            }
+
+            function renderScene() {
+                if (!currentScene || !currentScene.backgroundImage) {
+                    sceneContainer.innerHTML = '<div class="empty-scene">画像をアップロードしてください</div>'; return;
+                }
+                const styleDef = windowStyles[currentScene.windowStyle]; 
+                const charPos = currentScene.characterPosition; const dialogPos = currentScene.dialogPosition;
+                
+                // Determine dialog line height for preview
+                let dialogLineHeightCss = currentScene.dialogLineHeightForPreview || '1.8'; // Default to 1.8 factor
+                if (currentScene.fontSize && dialogLineHeightCss.endsWith && !dialogLineHeightCss.endsWith('px') && !isNaN(parseFloat(dialogLineHeightCss))) {
+                    // If it's a factor, calculate px value for CSS preview
+                    dialogLineHeightCss = (currentScene.fontSize * parseFloat(dialogLineHeightCss)) + 'px';
+                }
+
+
+                sceneContainer.innerHTML = `
+                    <img src="${currentScene.backgroundImage}" class="background-image" alt="背景">
+                    <div class="text-window" id="text-window">
+                        <div class="window-content">
+                            ${currentScene.characterName ? `<div class="character-name" style="color:${currentScene.characterColor}; font-size:${currentScene.characterFontSize}px; transform:translate(${charPos.x}px,${charPos.y}px);">${currentScene.characterName}</div>` : ''}
+                            <div class="dialog-text" style="color:${currentScene.fontColor}; font-size:${currentScene.fontSize}px; line-height:${dialogLineHeightCss}; transform:translate(${dialogPos.x}px,${dialogPos.y}px);">${formatDialogText(currentScene.dialogText)}</div>
+                        </div>
+                    </div>`;
+                const winEl = document.getElementById('text-window');
+                if (winEl) { 
+                    Object.keys(styleDef).forEach(key => {
+                        if (key !== 'boxShadow') { 
+                           winEl.style[key] = styleDef[key];
+                        }
+                    });
+                    winEl.style.opacity = currentScene.windowOpacity; 
+                    if (styleDef.boxShadow) { 
+                        winEl.style.boxShadow = styleDef.boxShadow;
+                    } else {
+                         winEl.style.boxShadow = 'none'; 
+                    }
+                    applyWindowPosition(winEl); 
+                }
+            }
+
+            function applyWindowPosition(winEl) {
+                const imgEl = sceneContainer.querySelector('.background-image'); if (!imgEl || !currentScene) return;
+                
+                const setPos = () => {
+                    const dispW = imgEl.offsetWidth; const dispH = imgEl.offsetHeight;
+                    if (dispW === 0 || dispH === 0) { return;  }
+
+                    // 出力画像と同じ比率でウィンドウサイズを計算
+                    const originalW = imgEl.naturalWidth || 800;
+                    const originalH = imgEl.naturalHeight || 600;
+                    
+                    // 出力画像で期待されるウィンドウサイズを計算
+                    const expectedOutputWindowWidth = Math.min(originalW * 0.9, 800);
+                    const expectedOutputMaxHeight = 240;
+                    
+                    // ウィンドウスケールを適用
+                    const windowScale = currentScene.windowScale || 1.0;
+                    
+                    // プレビューでも出力画像と同じ比率になるようにウィンドウサイズを計算
+                    const winW = (expectedOutputWindowWidth / originalW) * dispW * windowScale;
+                    winEl.style.width = `${winW}px`;
+                    
+                    // 高さの最大値も比率で計算
+                    const calculatedMaxHeight = (expectedOutputMaxHeight / originalH) * dispH * windowScale;
+                    winEl.style.maxHeight = `${calculatedMaxHeight}px`;
+                    
+                    winEl.style.height = 'auto'; 
+                    let winH = winEl.offsetHeight; 
+                    const minCssH = Math.max(100, (100 / originalH) * dispH * windowScale); // 最小高さも比率で調整
+                    winH = Math.max(minCssH, Math.min(winH, calculatedMaxHeight)); 
+                    winEl.style.height = `${winH}px`;
+
+                    let topVal = 0;
+                    switch(currentScene.windowPosition) {
+                        case 'top': topVal = 20; break;
+                        case 'middle': topVal = (dispH - winH) / 2; break;
+                        default: topVal = dispH - winH - 20;
+                    }
+                    const offset = currentScene.windowOffset;
+                    winEl.style.top = `${Math.max(0, Math.min(topVal + offset.y, dispH - winH))}px`;
+                    winEl.style.left = `${Math.max(0, Math.min((dispW - winW) / 2 + offset.x, dispW - winW))}px`;
+                    winEl.style.transform = 'none'; 
+                };
+
+                if (imgEl.complete && imgEl.naturalWidth !== 0) {
+                    setPos();
+                } else {
+                    imgEl.onload = setPos;
+                    imgEl.onerror = () => console.error("BG Image load error during applyWindowPosition");
+                }
+            }
+
+            function formatDialogText(text) { return text ? text.replace(/\n/g, '<br>') : ''; }
+
+            function updateSceneThumbnails() {
+                const listEl = document.getElementById('scenes-list'); listEl.innerHTML = '';
+                scenes.forEach((s, i) => {
+                    const thumb = document.createElement('div'); thumb.className = 'scene-thumbnail';
+                    thumb.draggable = true; thumb.dataset.index = i; if (s.timestamp === currentScene.timestamp) thumb.classList.add('active');
+                    const prevTxt = s.dialogText ? (s.dialogText.length > 20 ? s.dialogText.substring(0,20)+'...' : s.dialogText) : '(テキストなし)';
+                    thumb.innerHTML = `<img src="${s.backgroundImage || createDummyBackground(100,60,'No BG')}" alt="S ${i+1}"><div class="scene-info"><span>シーン ${i+1}</span><div class="scene-preview">${prevTxt}</div></div><button class="delete-scene" data-index="${i}">×</button>`;
+                    thumb.addEventListener('click', e => { if(!e.target.classList.contains('delete-scene')) loadScene(scenes[i]); });
+                    thumb.addEventListener('dragstart', handleDragStart);
+                    thumb.addEventListener('dragover', handleDragOver);
+                    thumb.addEventListener('drop', handleDrop);
+                    thumb.addEventListener('dragend', handleDragEnd);
+                    listEl.appendChild(thumb);
+                });
+                document.querySelectorAll('.delete-scene').forEach(btn => btn.addEventListener('click', function(e){
+                    e.stopPropagation(); const idx = parseInt(this.dataset.index);
+                    if(confirm('このシーンを削除しますか？')) {
+                        const delS_timestamp = scenes[idx].timestamp;
+                        scenes.splice(idx,1); 
+                        if(delS_timestamp === currentScene.timestamp) {
+                            if(scenes.length > 0) loadScene(scenes[Math.max(0, Math.min(idx, scenes.length-1))]);
+                            else { currentScene = createDefaultSceneState(); renderScene(); }
+                        }
+                        updateSceneThumbnails();
+                    }
+                }));
+            }
+            
+            let draggedElement = null; let draggedIndex = null;
+            function handleDragStart(e) { draggedElement = this; draggedIndex = parseInt(this.dataset.index); this.style.opacity = '0.5'; e.dataTransfer.effectAllowed = 'move'; }
+            function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move';  return false; }
+            function handleDrop(e) {
+                e.stopPropagation();
+                const targetIndex = parseInt(this.dataset.index);
+                if (draggedElement !== this && draggedIndex !== targetIndex) {
+                    const itemToMove = scenes.splice(draggedIndex, 1)[0];
+                    scenes.splice(targetIndex, 0, itemToMove);
+                    updateSceneThumbnails();
+                    if (itemToMove.timestamp === currentScene.timestamp) loadScene(currentScene); 
+                }
+                return false;
+            }
+            function handleDragEnd() { document.querySelectorAll('.scene-thumbnail').forEach(t => t.style.opacity = ''); }
+
+
+            function loadScene(scene) {
+                currentScene = scene;
+                characterNameInput.value = scene.characterName; characterColorInput.value = scene.characterColor;
+                characterFontSizeInput.value = scene.characterFontSize; syncSelectWithValue(characterFontSizeSelect, scene.characterFontSize);
+                dialogTextInput.value = scene.dialogText; fontColorInput.value = scene.fontColor;
+                dialogFontSizeInput.value = scene.fontSize; syncSelectWithValue(dialogFontSizeSelect, scene.fontSize);
+                
+                // windowScale復元
+                windowScaleSlider.value = (scene.windowScale || 1.0) * 100; 
+                scaleValue.textContent = `${Math.round((scene.windowScale || 1.0) * 100)}%`;
+                
+                // dialogLineHeight復元
+                const lineHeightValue = scene.dialogLineHeightForPreview || '1.8';
+                dialogLineHeightSlider.value = lineHeightValue;
+                document.getElementById('line-height-value').textContent = lineHeightValue;
+
+                windowOpacitySlider.value = scene.windowOpacity * 100; opacityValue.textContent = `${Math.round(scene.windowOpacity*100)}%`;
+                windowPositionSelect.value = scene.windowPosition;
+                windowStyleOptions.forEach(opt=>opt.classList.toggle('selected', opt.dataset.window === scene.windowStyle));
+                updateWindowPositionDisplay(); 
+                renderScene(); 
+                updateSceneThumbnails();
+            }
+            
+            function syncSelectWithValue(sel, val) { let match=false; for(let o of sel.options){if(parseInt(o.value)===val){sel.value=o.value;match=true;break;}} if(!match)sel.value='custom';}
+            function createDefaultSceneState() { return { backgroundImage: null, windowStyle: 'standard', windowPosition: 'bottom', characterName: '', characterColor: '#ffffff', characterFontSize: 20, dialogText: '', fontSize: 16, fontColor: '#ffffff', dialogLineHeightForPreview: '1.8', windowOpacity: 0.8, windowScale: 1.0, windowOffset: {x:0,y:0}, characterPosition: {x:0,y:0}, dialogPosition: {x:0,y:0}, timestamp: new Date().toISOString() }; }
+
+                        // --- IMAGE SAVING FUNCTIONS ---
+            async function drawSceneToCanvas(targetScene, canvas, ctx) {
+                const imgDisplayElement = sceneContainer.querySelector('.background-image');
+                const previewWindowElement = sceneContainer.querySelector('.text-window');
+
+                if (!imgDisplayElement || !previewWindowElement || !imgDisplayElement.complete || imgDisplayElement.naturalWidth === 0) {
+                    console.error("drawSceneToCanvas: Preview elements for saving not ready or background image not loaded.");
+                    ctx.fillStyle = 'gray'; ctx.fillRect(0,0,canvas.width, canvas.height);
+                    ctx.fillStyle = 'white'; ctx.font = '20px sans-serif'; ctx.textAlign = 'center';
+                    ctx.fillText("Error: Preview elements not ready.", canvas.width/2, canvas.height/2);
+                    return false; 
+                }
+
+                const imgOriginalWidth = imgDisplayElement.naturalWidth;
+                const imgOriginalHeight = imgDisplayElement.naturalHeight;
+                canvas.width = imgOriginalWidth;
+                canvas.height = imgOriginalHeight;
+
+                ctx.drawImage(imgDisplayElement, 0, 0, canvas.width, canvas.height);
+
+                // 出力用のウィンドウサイズを独自で計算（プレビューサイズに依存しない）
+                const expectedOutputWindowWidth = Math.min(imgOriginalWidth * 0.9, 800);
+                
+                // ウィンドウスケールを適用
+                const windowScale = targetScene.windowScale || 1.0;
+                const scaledWindowWidth = expectedOutputWindowWidth * windowScale;
+                
+                // 仮想的なプレビューを計算してテキストサイズを決定（スケール適用後のサイズを使用）
+                const tempDiv = document.createElement('div');
+                tempDiv.style.cssText = 'position:absolute;top:-9999px;left:-9999px;visibility:hidden;';
+                tempDiv.style.width = scaledWindowWidth + 'px';
+                tempDiv.style.padding = (20 * windowScale) + 'px ' + (30 * windowScale) + 'px';
+                tempDiv.style.fontFamily = getComputedStyle(previewWindowElement).fontFamily;
+                
+                const tempContent = document.createElement('div');
+                tempContent.style.display = 'flex';
+                tempContent.style.flexDirection = 'column';
+                tempContent.style.gap = '10px';
+                
+                if (targetScene.characterName) {
+                    const charDiv = document.createElement('div');
+                    charDiv.style.fontSize = (targetScene.characterFontSize * windowScale) + 'px';
+                    charDiv.style.fontWeight = 'bold';
+                    charDiv.style.lineHeight = '1.3';
+                    charDiv.textContent = targetScene.characterName;
+                    tempContent.appendChild(charDiv);
+                }
+                
+                if (targetScene.dialogText) {
+                    const dialogDiv = document.createElement('div');
+                    dialogDiv.style.fontSize = (targetScene.fontSize * windowScale) + 'px';
+                    
+                    let dialogLineHeightCss = targetScene.dialogLineHeightForPreview || '1.8';
+                    if (targetScene.fontSize && dialogLineHeightCss.endsWith && !dialogLineHeightCss.endsWith('px') && !isNaN(parseFloat(dialogLineHeightCss))) {
+                        dialogLineHeightCss = (targetScene.fontSize * parseFloat(dialogLineHeightCss)) + 'px';
+                    }
+                    dialogDiv.style.lineHeight = dialogLineHeightCss;
+                    dialogDiv.innerHTML = targetScene.dialogText.replace(/\n/g, '<br>');
+                    tempContent.appendChild(dialogDiv);
+                }
+                
+                tempDiv.appendChild(tempContent);
+                document.body.appendChild(tempDiv);
+                
+                const contentHeight = tempDiv.offsetHeight;
+                const expectedOutputMaxHeight = 240;
+                const actualWindowHeight = Math.min(contentHeight, expectedOutputMaxHeight);
+                
+                document.body.removeChild(tempDiv);
+
+                // ウィンドウ位置を計算（スケール適用後のサイズを使用）
+                let windowX, windowY;
+                switch(targetScene.windowPosition) {
+                    case 'top': 
+                        windowY = 20;
+                        break;
+                    case 'middle': 
+                        windowY = (imgOriginalHeight - actualWindowHeight) / 2;
+                        break;
+                    default: // bottom
+                        windowY = imgOriginalHeight - actualWindowHeight - 20;
+                }
+                
+                windowX = (imgOriginalWidth - scaledWindowWidth) / 2;
+                
+                // オフセットを適用
+                const offset = targetScene.windowOffset || {x:0, y:0};
+                windowX += offset.x;
+                windowY += offset.y;
+                
+                // 境界チェック（スケール適用後のサイズを使用）
+                windowX = Math.max(0, Math.min(windowX, imgOriginalWidth - scaledWindowWidth));
+                windowY = Math.max(0, Math.min(windowY, imgOriginalHeight - actualWindowHeight));
+
+                const windowWidth_on_canvas = scaledWindowWidth;
+                const windowHeight_on_canvas = actualWindowHeight;
+                const windowX_on_canvas = windowX;
+                const windowY_on_canvas = windowY;
+
+                const styleDef = windowStyles[targetScene.windowStyle || 'standard'];
+                ctx.save();
+                ctx.globalAlpha = targetScene.windowOpacity || 0.8;
+
+                if (styleDef.background.includes('gradient')) {
+                    const gradient = ctx.createLinearGradient(windowX_on_canvas, windowY_on_canvas, windowX_on_canvas + windowWidth_on_canvas, windowY_on_canvas + windowHeight_on_canvas);
+                    if (targetScene.windowStyle === 'fantasy') { gradient.addColorStop(0, 'rgba(42,26,58,0.9)'); gradient.addColorStop(1, 'rgba(26,42,58,0.9)'); }
+                    else if (targetScene.windowStyle === 'cyber') { gradient.addColorStop(0, 'rgba(0,26,51,0.9)'); gradient.addColorStop(1, 'rgba(0,51,102,0.9)'); }
+                    ctx.fillStyle = gradient;
+                } else { ctx.fillStyle = styleDef.background; }
+
+                const radius = styleDef.borderRadius ? parseInt(styleDef.borderRadius) : 0;
+                ctx.beginPath();
+                ctx.moveTo(windowX_on_canvas + radius, windowY_on_canvas);
+                ctx.lineTo(windowX_on_canvas + windowWidth_on_canvas - radius, windowY_on_canvas);
+                ctx.quadraticCurveTo(windowX_on_canvas + windowWidth_on_canvas, windowY_on_canvas, windowX_on_canvas + windowWidth_on_canvas, windowY_on_canvas + radius);
+                ctx.lineTo(windowX_on_canvas + windowWidth_on_canvas, windowY_on_canvas + windowHeight_on_canvas - radius);
+                ctx.quadraticCurveTo(windowX_on_canvas + windowWidth_on_canvas, windowY_on_canvas + windowHeight_on_canvas, windowX_on_canvas + windowWidth_on_canvas - radius, windowY_on_canvas + windowHeight_on_canvas);
+                ctx.lineTo(windowX_on_canvas + radius, windowY_on_canvas + windowHeight_on_canvas);
+                ctx.quadraticCurveTo(windowX_on_canvas, windowY_on_canvas + windowHeight_on_canvas, windowX_on_canvas, windowY_on_canvas + windowHeight_on_canvas - radius);
+                ctx.lineTo(windowX_on_canvas, windowY_on_canvas + radius);
+                ctx.quadraticCurveTo(windowX_on_canvas, windowY_on_canvas, windowX_on_canvas + radius, windowY_on_canvas);
+                ctx.closePath();
+                
+                if (styleDef.boxShadow && styleDef.boxShadow !== 'none') {
+                    const shadowMatch = styleDef.boxShadow.match(/(rgba?\(.+?\)|#?\w+)\s+(-?\d+)px\s+(-?\d+)px\s+(-?\d+)px/);
+                    if (shadowMatch) {
+                        ctx.shadowColor = shadowMatch[1];
+                        ctx.shadowOffsetX = parseFloat(shadowMatch[2]);
+                        ctx.shadowOffsetY = parseFloat(shadowMatch[3]);
+                        ctx.shadowBlur = parseFloat(shadowMatch[4]);
+                    }
+                }
+                ctx.fill();
+                ctx.shadowColor = 'transparent'; 
+
+                if (styleDef.border && styleDef.border !== 'none') {
+                    const borderMatch = styleDef.border.match(/(\d+)px\s+solid\s+(.*)/);
+                    if (borderMatch) { ctx.strokeStyle = borderMatch[2]; ctx.lineWidth = parseInt(borderMatch[1]); ctx.stroke(); }
+                }
+                ctx.restore();
+                
+                // テキスト描画
+                ctx.save();
+                
+                const paddingX = 30;
+                const paddingY = 20;
+                let textY = windowY_on_canvas + paddingY;
+                
+                if (targetScene.characterName) {
+                    ctx.font = `bold ${targetScene.characterFontSize}px "Noto Sans JP"`;
+                    ctx.fillStyle = targetScene.characterColor;
+                    ctx.textBaseline = 'top';
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                    ctx.shadowOffsetX = 2;
+                    ctx.shadowOffsetY = 2;
+                    ctx.shadowBlur = 4;
+                    
+                    const charPos = targetScene.characterPosition || {x:0, y:0};
+                    ctx.fillText(targetScene.characterName, windowX_on_canvas + paddingX + charPos.x, textY + charPos.y);
+                    textY += targetScene.characterFontSize * 1.3 + 10; // gap
+                    ctx.shadowColor = 'transparent';
+                }
+
+                if (targetScene.dialogText) {
+                    ctx.font = `400 ${targetScene.fontSize}px "Noto Sans JP"`;
+                    ctx.fillStyle = targetScene.fontColor;
+                    ctx.textBaseline = 'top';
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                    ctx.shadowOffsetX = 1;
+                    ctx.shadowOffsetY = 1;
+                    ctx.shadowBlur = 3;
+                    
+                    let dialogLineHeight = targetScene.fontSize * 1.8; // デフォルト
+                    if (targetScene.dialogLineHeightForPreview && !isNaN(parseFloat(targetScene.dialogLineHeightForPreview))) {
+                        if (targetScene.dialogLineHeightForPreview.endsWith && targetScene.dialogLineHeightForPreview.endsWith('px')) {
+                            dialogLineHeight = parseFloat(targetScene.dialogLineHeightForPreview);
+                        } else {
+                            dialogLineHeight = targetScene.fontSize * parseFloat(targetScene.dialogLineHeightForPreview);
+                        }
+                    }
+
+                    const lines = targetScene.dialogText.split('\n');
+                    const dialogPos = targetScene.dialogPosition || {x:0, y:0};
+                    lines.forEach((line, index) => {
+                        ctx.fillText(line, windowX_on_canvas + paddingX + dialogPos.x, textY + dialogPos.y + (index * dialogLineHeight));
+                    });
+                }
+                ctx.restore();
+                return true; 
+            }
+
+            document.getElementById('save-as-image').addEventListener('click', async function() {
+                if (!currentScene || !currentScene.backgroundImage) { alert('保存するシーンがありません'); return; }
+                renderScene(); 
+                await new Promise(r => setTimeout(r, 250)); // Increased delay
+
+                try {
+                    const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+                    canvas.width = 800; canvas.height = 600; 
+                    
+                    const success = await drawSceneToCanvas(currentScene, canvas, ctx);
+                    if (!success) {
+                        alert("画像の描画に失敗しました。プレビュー要素が正しく表示されているか確認してください。");
+                        return;
+                    }
+                    
+                    const link = document.createElement('a');
+                    const sceneIdx = scenes.findIndex(s => s.timestamp === currentScene.timestamp);
+                    link.download = `scene_${sceneIdx !== -1 ? sceneIdx + 1 : 'current'}_${Date.now()}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                } catch (error) { console.error('画像保存エラー:', error); alert('画像保存エラー: ' + error.message); }
+            });
+
+            document.getElementById('save-all-images').addEventListener('click', async function() {
+                if (scenes.length === 0) { alert('保存するシーンがありません'); return; }
+                
+                originalCurrentSceneForSaveAll = currentScene ? scenes.findIndex(s => s.timestamp === currentScene.timestamp) : -1;
+
+                const progressDiv = document.createElement('div');
+                progressDiv.style.cssText = `position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);color:white;padding:20px 40px;border-radius:8px;z-index:10000;font-size:16px;`;
+                document.body.appendChild(progressDiv);
+
+                try {
+                    const zip = new JSZip(); const folder = zip.folder('scenes');
+                    for (let i = 0; i < scenes.length; i++) {
+                        progressDiv.textContent = `生成中... (${i + 1}/${scenes.length})`;
+                        const sceneToSave = scenes[i];
+                        
+                        if (!currentScene || currentScene.timestamp !== sceneToSave.timestamp) {
+                            loadScene(sceneToSave); 
+                            await new Promise(r => setTimeout(r, 400)); // Further increased delay
+                        } else { 
+                            renderScene();
+                            await new Promise(r => setTimeout(r, 400));
+                        }
+                        
+                        const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+                        canvas.width = 800; canvas.height = 600; 
+
+                        const success = await drawSceneToCanvas(sceneToSave, canvas, ctx);
+                        if (!success) {
+                             console.warn(`Skipping scene ${i+1} due to drawing error in drawSceneToCanvas.`);
+                             continue;
+                        }
+                        
+                        const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+                        folder.file(`scene_${String(i + 1).padStart(3, '0')}.png`, blob);
+                    }
+                    progressDiv.textContent = 'ZIP生成中...';
+                    const zipBlob = await zip.generateAsync({type:'blob'});
+                    const link = document.createElement('a'); link.href = URL.createObjectURL(zipBlob);
+                    link.download = `scenes_${Date.now()}.zip`; link.click();
+                } catch (error) { console.error('全画像保存エラー:', error); alert('全画像保存エラー: ' + error.message); }
+                finally { 
+                    document.body.removeChild(progressDiv);
+                    if (originalCurrentSceneForSaveAll !== -1 && originalCurrentSceneForSaveAll < scenes.length) {
+                        loadScene(scenes[originalCurrentSceneForSaveAll]);
+                    } else if (scenes.length > 0) {
+                        loadScene(scenes[0]);
+                    } else {
+                        loadScene(createDefaultSceneState());
+                    }
+                    originalCurrentSceneForSaveAll = null;
+                }
+            });
+
+            // --- APPLY CURRENT SETTINGS TO ALL SCENES ---
+            applySettingsToAllButton.addEventListener('click', function() {
+                if (!currentScene || currentScene.backgroundImage === null) { 
+                    alert("適用する有効な現在のシーンがありません。");
+                    return;
+                }
+                if (scenes.length === 0) {
+                    alert("適用対象のシーンがありません。");
+                    return;
+                }
+
+                if (!confirm("現在のシーンのウィンドウ、テキスト位置、フォント設定を他の全てのシーンに適用しますか？\n（各シーンの背景画像とセリフ内容は変更されません）")) {
+                    return;
+                }
+
+                const settingsToApply = {
+                    windowStyle: currentScene.windowStyle,
+                    windowPosition: currentScene.windowPosition,
+                    windowOpacity: currentScene.windowOpacity,
+                    windowOffset: { ...currentScene.windowOffset },
+                    characterFontSize: currentScene.characterFontSize,
+                    characterPosition: { ...currentScene.characterPosition },
+                    characterColor: currentScene.characterColor,
+                    fontSize: currentScene.fontSize, 
+                    dialogPosition: { ...currentScene.dialogPosition }, 
+                    fontColor: currentScene.fontColor,
+                    dialogLineHeightForPreview: currentScene.dialogLineHeightForPreview 
+                };
+
+                scenes.forEach(scene => {
+                    scene.windowStyle = settingsToApply.windowStyle;
+                    scene.windowPosition = settingsToApply.windowPosition;
+                    scene.windowOpacity = settingsToApply.windowOpacity;
+                    scene.windowOffset = { ...settingsToApply.windowOffset };
+                    scene.characterFontSize = settingsToApply.characterFontSize;
+                    scene.characterPosition = { ...settingsToApply.characterPosition };
+                    scene.characterColor = settingsToApply.characterColor;
+                    scene.fontSize = settingsToApply.fontSize;
+                    scene.dialogPosition = { ...settingsToApply.dialogPosition };
+                    scene.fontColor = settingsToApply.fontColor;
+                    scene.dialogLineHeightForPreview = settingsToApply.dialogLineHeightForPreview;
+                });
+                
+                renderScene(); 
+                updateSceneThumbnails(); 
+                alert("現在の設定が他の全てのシーンに適用されました。");
+            });
+
+
+            // CSV Export
+            document.getElementById('export-csv').addEventListener('click', function() {
+                if (scenes.length === 0) { alert('エクスポートするシーンがありません'); return; }
+                let csv = 'scene_num,char_name,char_color,char_font_size,dialog_text,dialog_font_size,dialog_font_color,dialog_line_height,win_pos,win_style,win_opacity,win_offset_x,win_offset_y,char_pos_x,char_pos_y,dialog_pos_x,dialog_pos_y\n'; 
+                scenes.forEach((s, i) => {
+                    const cP = s.characterPosition; const dP = s.dialogPosition; const wO = s.windowOffset;
+                    const r = [ i + 1, s.characterName, s.characterColor, s.characterFontSize,
+                        (s.dialogText || '').replace(/\n/g, '\\n'), s.fontSize, s.fontColor, s.dialogLineHeightForPreview || '1.8', 
+                        s.windowPosition, s.windowStyle, s.windowOpacity, wO.x, wO.y, cP.x, cP.y, dP.x, dP.y
+                    ].map(v => `"${(String(v || '')).replace(/"/g, '""')}"`).join(',');
+                    csv += r + '\n';
+                });
+                const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+                const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
+                link.download = `scenes_data_${Date.now()}.csv`; link.click();
+            });
+
+            // CSV Import
+            document.getElementById('import-csv').addEventListener('change', function(e) {
+                const file = e.target.files[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const csvData = event.target.result; const lines = csvData.split('\n');
+                        if (lines.length < 2) throw new Error('CSVが空かヘッダーのみ');
+                        const imported = []; const header = lines[0].trim().toLowerCase().split(',').map(h => h.replace(/^"|"$/g, ''));
+                        const colMap = {}; header.forEach((h,i) => colMap[h] = i); 
+
+                        for (let i = 1; i < lines.length; i++) {
+                            const line = lines[i].trim(); if (!line) continue;
+                            const values = line.match(/(\".*?\"|[^,]+)(?=\s*,|\s*$)/g).map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"'));
+                            const s = createDefaultSceneState();
+                            s.backgroundImage = createDummyBackground(800,600,`Imported ${values[colMap.scene_num] || i}`);
+                            s.characterName = values[colMap.char_name] || '';
+                            s.characterColor = values[colMap.char_color] || '#ffffff';
+                            s.characterFontSize = parseInt(values[colMap.char_font_size]) || 20;
+                            s.dialogText = (values[colMap.dialog_text] || '').replace(/\\n/g, '\n');
+                            s.fontSize = parseInt(values[colMap.dialog_font_size]) || 16;
+                            s.fontColor = values[colMap.dialog_font_color] || '#ffffff';
+                            s.dialogLineHeightForPreview = values[colMap.dialog_line_height] || (s.fontSize * 1.2) + 'px'; 
+                            s.windowPosition = values[colMap.win_pos] || 'bottom';
+                            s.windowStyle = values[colMap.win_style] || 'standard';
+                            s.windowOpacity = parseFloat(values[colMap.win_opacity]) || 0.8;
+                            s.windowOffset = { x: parseInt(values[colMap.win_offset_x])||0, y: parseInt(values[colMap.win_offset_y])||0 };
+                            s.characterPosition = { x: parseInt(values[colMap.char_pos_x])||0, y: parseInt(values[colMap.char_pos_y])||0 };
+                            s.dialogPosition = { x: parseInt(values[colMap.dialog_pos_x])||0, y: parseInt(values[colMap.dialog_pos_y])||0 };
+                            s.timestamp = new Date().toISOString(); 
+                            imported.push(s);
+                        }
+                        if (imported.length > 0) { scenes = imported; loadScene(scenes[0]); updateSceneThumbnails(); alert(`${scenes.length}シーンをインポート。背景はダミーです。`);}
+                        else { alert('有効なシーンを読み込めませんでした。'); }
+                    } catch (err) { console.error('CSVインポートエラー:', err); alert(`CSV読込エラー: ${err.message}`); }
+                    finally { e.target.value = null; }
+                };
+                reader.readAsText(file, 'UTF-8');
+            });
+            
+            function createDummyBackground(w=800,h=600,txt="BGなし") {
+                const c=document.createElement('canvas'); c.width=w; c.height=h; const x=c.getContext('2d');
+                const grad = x.createLinearGradient(0,0,w,h); grad.addColorStop(0,'#2c3e50'); grad.addColorStop(1,'#34495e');
+                x.fillStyle=grad; x.fillRect(0,0,w,h);
+                x.fillStyle='rgba(255,255,255,0.7)'; x.font='bold 24px Noto Sans JP'; x.textAlign='center'; x.textBaseline='middle';
+                x.fillText(txt, w/2, h/2); return c.toDataURL();
+            }
+            document.addEventListener('keydown', (e) => { if ((e.ctrlKey||e.metaKey)&&e.key==='s') { e.preventDefault(); document.getElementById('save-as-image').click(); }});
+
+            loadScene(currentScene);
+            updateWindowPositionDisplay();
+            renderScene(); // Initial render
+        });
+    </script>
+</body>
+</html>
